@@ -11,25 +11,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # 1. Download repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract fixed EarnX project
+      # 2. Extract EarnX ZIP
+      - name: Extract EarnX project
         run: |
           rm -rf earnx_project
           unzip -o EarnX-AndroidIDE-ready-FIXED.zip -d earnx_project
 
+      # 3. Setup Java
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+      # 4. Setup Gradle
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
 
+      # 5. Setup Android SDK
       - name: Setup Android SDK
         run: |
           SDKMANAGER=$(find "$ANDROID_HOME" -type f -name sdkmanager | head -n 1)
@@ -41,28 +47,55 @@ jobs:
 
           yes | "$SDKMANAGER" --licenses || true
 
-          "$SDKMANAGER" "platform-tools" \
+          "$SDKMANAGER" \
+            "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
 
+      # 6. Enable AndroidX
+      - name: Enable AndroidX
+        run: |
+          mkdir -p earnx_project/EarnX_cap/android
+
+          touch earnx_project/EarnX_cap/android/gradle.properties
+
+          echo "android.useAndroidX=true" >> earnx_project/EarnX_cap/android/gradle.properties
+          echo "android.enableJetifier=true" >> earnx_project/EarnX_cap/android/gradle.properties
+
+          echo "AndroidX enabled"
+
+      # 7. Check Android project
       - name: Check Android project
         run: |
+          echo "Checking EarnX Android project..."
+
           test -f earnx_project/EarnX_cap/android/settings.gradle.kts
           test -f earnx_project/EarnX_cap/android/app/build.gradle.kts
-          echo "Android project found."
 
+          echo "Android project found successfully."
+
+      # 8. Build APK
       - name: Build Debug APK
         working-directory: earnx_project/EarnX_cap/android
         run: |
-          gradle assembleDebug --stacktrace --no-daemon
+          gradle assembleDebug \
+            --stacktrace \
+            --no-daemon
 
+      # 9. Find APK
       - name: Find APK
         run: |
-          find earnx_project/EarnX_cap/android -type f -name "*.apk" -print
+          echo "Searching for APK..."
+          find earnx_project/EarnX_cap/android \
+            -type f \
+            -name "*.apk" \
+            -print
 
+      # 10. Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: EarnX-APK
-          path: earnx_project/EarnX_cap/android/app/build/outputs/apk/debug/*.apk
+          path: |
+            earnx_project/EarnX_cap/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
