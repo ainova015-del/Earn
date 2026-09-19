@@ -12,38 +12,28 @@ jobs:
 
     steps:
 
-      # 1. Download repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Extract EarnX ZIP
       - name: Extract EarnX project
         run: |
           rm -rf earnx_project
           unzip -o EarnX-AndroidIDE-ready-FIXED.zip -d earnx_project
 
-      # 3. Setup Java
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      # 4. Setup Gradle
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
 
-      # 5. Setup Android SDK
       - name: Setup Android SDK
         run: |
           SDKMANAGER=$(find "$ANDROID_HOME" -type f -name sdkmanager | head -n 1)
-
-          if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager not found"
-            exit 1
-          fi
 
           yes | "$SDKMANAGER" --licenses || true
 
@@ -52,46 +42,58 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.0"
 
-      # 6. Enable AndroidX
       - name: Enable AndroidX
         run: |
-          mkdir -p earnx_project/EarnX_cap/android
-
           touch earnx_project/EarnX_cap/android/gradle.properties
 
           echo "android.useAndroidX=true" >> earnx_project/EarnX_cap/android/gradle.properties
           echo "android.enableJetifier=true" >> earnx_project/EarnX_cap/android/gradle.properties
 
-          echo "AndroidX enabled"
+      - name: Fix Java and Kotlin JVM target
+        working-directory: earnx_project/EarnX_cap/android
+        run: |
+          sed -i 's/JavaVersion.VERSION_1_8/JavaVersion.VERSION_17/g' app/build.gradle.kts
+          sed -i 's/JavaVersion.VERSION_8/JavaVersion.VERSION_17/g' app/build.gradle.kts
+          sed -i 's/sourceCompatibility = 1\.8/sourceCompatibility = JavaVersion.VERSION_17/g' app/build.gradle.kts
+          sed -i 's/targetCompatibility = 1\.8/targetCompatibility = JavaVersion.VERSION_17/g' app/build.gradle.kts
 
-      # 7. Check Android project
+          cat >> app/build.gradle.kts <<'EOF'
+
+          // EarnX JVM compatibility fix
+          android {
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+          }
+
+          tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+          EOF
+
+          echo "Java/Kotlin JVM target fixed to 17"
+
       - name: Check Android project
         run: |
-          echo "Checking EarnX Android project..."
-
           test -f earnx_project/EarnX_cap/android/settings.gradle.kts
           test -f earnx_project/EarnX_cap/android/app/build.gradle.kts
+          echo "Android project OK"
 
-          echo "Android project found successfully."
-
-      # 8. Build APK
       - name: Build Debug APK
         working-directory: earnx_project/EarnX_cap/android
         run: |
-          gradle assembleDebug \
-            --stacktrace \
-            --no-daemon
+          gradle assembleDebug --stacktrace --no-daemon
 
-      # 9. Find APK
       - name: Find APK
         run: |
-          echo "Searching for APK..."
           find earnx_project/EarnX_cap/android \
             -type f \
             -name "*.apk" \
             -print
 
-      # 10. Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
