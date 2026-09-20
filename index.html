@@ -1,1 +1,14 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d6efd"><meta name="description" content="EarnX rewards app"><link rel="manifest" href="./manifest.webmanifest"><title>EarnX</title></head><body><script type="module">import { auth } from '/js/firebase.js'; import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js'; onAuthStateChanged(auth,u=>location.replace(u?'/home.html':'/login.html'));</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d6efd">
+  <title>EarnX</title>
+</head>
+<body>
+  <script>
+    location.replace("./login.html");
+  </script>
+</body>
+</html>
