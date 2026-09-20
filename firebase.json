@@ -1,0 +1,16 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": ["firebase.json", "firestore.rules", "firestore.indexes.json", "functions/**", "README.md", "node_modules/**"],
+    "cleanUrls": true,
+    "trailingSlash": false
+  }
+}
